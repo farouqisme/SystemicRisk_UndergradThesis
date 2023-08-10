@@ -1,0 +1,509 @@
+library(mipfp)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(ggplot2)
+library(writexl)
+library(urca)
+library(plyr)
+library(ioanalysis)
+
+
+setwd("C:/Users/Akmal/OneDrive - UGM 365/Documents/Git Repository/SKRIPSI/Data RAS")
+
+x2005 <- as.data.frame(read_xlsx("RAS test.xlsx", sheet = '2005'))
+x2010 <- as.data.frame(read_xlsx("RAS test.xlsx", sheet = '2010'))
+x2016 <- as.data.frame(read_xlsx("RAS test.xlsx", sheet = '2016'))
+
+update_05 <- read_xlsx("updatebahan_rev.xlsx", sheet = "05")
+update_10 <- read_xlsx("updatebahan_rev.xlsx", sheet = "10")
+update_16 <- read_xlsx("updatebahan_rev.xlsx", sheet = "16")
+
+
+for(a in 1:5){
+  assign(paste0("update",a), as.list(read_xlsx("growth_rev.xlsx", sheet = as.character(a))))
+}
+
+
+for(a in 1:5){
+  assign(paste0("f",a), as.list(read_xlsx("f_rev.xlsx", sheet = as.character(a))))
+}
+
+################################################################SET 2005 Matrix
+#####zmatrix
+z2005matr <- x2005[,c(1:9)]
+z2005matr <- z2005matr[c(1:9),]
+z2005matr <- matrix(as.numeric(unlist(z2005matr)),nrow=nrow(z2005matr))
+
+#####z_hor_matrix
+z_hor_matrix_05 <- colSums(z2005matr)
+
+#####z_ver_matrix
+z_ver_matrix_05 <- rowSums(z2005matr)
+
+#####colsmatrix (X gede)->vertical
+X__2005matr <- x2005[,12]
+X__2005matr <- X__2005matr[-c(10:12)]
+
+#####colsmatrix (X gede)->horizontal
+X__2005matrhor <- x2005[12,]
+X__2005matrhor <- matrix(X__2005matrhor[-c(10:12)])
+X__2005matrhor <- matrix(as.numeric(unlist(X__2005matrhor)),nrow=nrow(X__2005matrhor))
+
+
+#####a matrix
+a2005matr <- list()
+for (i in 1:9){
+  a <- list(matrix(unlist(ldply(z2005matr[,i]/X__2005matrhor[i]))))
+  a2005matr <- append(a2005matr, a)
+}
+a2005matr <- do.call(cbind, a2005matr)
+
+
+
+
+
+
+################################################################SET 2010 Matrix
+#####zmatrix
+z2010matr <- x2010[,c(1:17)]
+z2010matr <- z2010matr[c(1:17),]
+z2010matr <- matrix(as.numeric(unlist(z2010matr)),nrow=nrow(z2010matr))
+
+#####z_hor_matrix
+z_hor_matrix <- colSums(z2010matr)
+
+#####z_ver_matrix
+z_ver_matrix <- rowSums(z2010matr)
+
+#####colsmatrix (X gede)->vertical
+X__2010matr <- x2010[,20]
+X__2010matr <- X__2010matr[-c(18:20)]
+
+#####colsmatrix (X gede)->horizontal
+X__2010matrhor <- x2010[20,]
+X__2010matrhor <- matrix(X__2010matrhor[-c(18:20)])
+X__2010matrhor <- matrix(as.numeric(unlist(X__2010matrhor)),nrow=nrow(X__2010matrhor))
+
+
+#####a matrix
+a2010matr <- list()
+for (i in 1:17){
+  a <- list(matrix(unlist(ldply(z2010matr[,i]/X__2010matrhor[i]))))
+  a2010matr <- append(a2010matr, a)
+}
+a2010matr <- do.call(cbind, a2010matr)
+
+
+
+
+################################################################SETTING UP 2016 Matrix
+#####zmatrix
+z2016matr <- x2016[,c(1:17)]
+z2016matr <- z2016matr[c(1:17),]
+z2016matr <- matrix(as.numeric(unlist(z2016matr)),nrow=nrow(z2016matr))
+
+#####z_hor_matrix
+z_hor_matrix_16 <- colSums(z2016matr)
+
+#####z_ver_matrix
+z_ver_matrix_16 <- rowSums(z2016matr)
+
+#####colsmatrix (X gede)->vertical
+X__2016matr <- x2016[,20]
+X__2016matr <- X__2016matr[-c(18:20)]
+
+#####colsmatrix (X gede)->horizontal
+X__2016matrhor <- x2016[20,]
+X__2016matrhor <- matrix(X__2016matrhor[-c(18:20)])
+X__2016matrhor <- matrix(as.numeric(unlist(X__2016matrhor)),nrow=nrow(X__2016matrhor))
+
+
+#####a matrix
+a2016matr <- list()
+for (i in 1:17){
+  a <- list(matrix(unlist(ldply(z2016matr[,i]/X__2016matrhor[i]))))
+  a2016matr <- append(a2016matr, a)
+}
+a2016matr <- do.call(cbind, a2016matr)
+
+
+################################################################MATRIX SCALLING
+
+#################2005
+
+#####times growth
+
+#U = Total Intermediate Output
+z_ver_matrix_05_1 <- z_ver_matrix_05*update_05$`2005:1`
+#V = Total Intermediate Input
+z_hor_matrix_05_1 <- z_hor_matrix_05*update_05$`2005:1`
+#X = Total Output
+X__2005matr_1 <- X__2005matr*update_05$`2005:1`
+
+
+x1 <- matrix(X__2005matr_1)
+u1 <- matrix(z_ver_matrix_05_1)
+v1 <- matrix(z_hor_matrix_05_1)
+A <- a2005matr
+maxiter <- 10
+for (i in 1:maxiter) {
+  tol <- 0.001
+  n <- ncol(A)
+  u <- A %*% x1
+  j <- which(u == 0)
+  u[j] <- 1
+  r <- u1/u
+  R <- matrix(r, ncol = n, nrow = n)
+  A1 <- R * A
+  v <- t(A1 * t(matrix(x1, ncol = n, nrow = n))) %*% matrix(rep(1, 
+                                                                n))
+  j <- which(v == 0)
+  v[j] <- 1
+  s <- v1/v
+  S <- matrix(s, ncol = n, nrow = n, byrow = TRUE)
+  A2005 <- A1 * S
+  rmse <- sqrt(sum((A2005 - A)^2)/(n^2))
+  if (rmse < tol) 
+    break
+}
+
+#####a matrix
+z2005matr_1 <- list()
+for (i in 1:9){
+  a <- list(matrix(unlist(ldply(A2005[,i]*z_hor_matrix_05_1[i]))))
+  z2005matr_1 <- append(z2005matr_1, a)
+}
+
+z2005matr_1 <- do.call(cbind, z2005matr_1)
+
+#################2010
+
+#####times growth
+
+#U = Total Intermediate Output
+z_ver_matrix_1 <- z_ver_matrix*update_10$`2010:1`
+#V = Total Intermediate Input
+z_hor_matrix_1 <- z_hor_matrix*update_10$`2010:1`
+#X = Total Output
+X__2010matr_1 <- X__2010matr*update_10$`2010:1`
+
+
+x1 <- matrix(X__2010matr_1)
+u1 <- matrix(z_ver_matrix_1)
+v1 <- matrix(z_hor_matrix_1)
+A <- a2010matr
+maxiter <- 10
+for (i in 1:maxiter) {
+  tol <- 0.001
+  n <- ncol(A)
+  u <- A %*% x1
+  j <- which(u == 0)
+  u[j] <- 1
+  r <- u1/u
+  R <- matrix(r, ncol = n, nrow = n)
+  A1 <- R * A
+  v <- t(A1 * t(matrix(x1, ncol = n, nrow = n))) %*% matrix(rep(1, 
+                                                                n))
+  j <- which(v == 0)
+  v[j] <- 1
+  s <- v1/v
+  S <- matrix(s, ncol = n, nrow = n, byrow = TRUE)
+  A2010 <- A1 * S
+  rmse <- sqrt(sum((A2010 - A)^2)/(n^2))
+  if (rmse < tol) 
+    break
+}
+
+#####a matrix
+z2010matr_1 <- list()
+for (i in 1:17){
+  a <- list(matrix(unlist(ldply(A2010[,i]*z_hor_matrix_1[i]))))
+  z2010matr_1 <- append(z2010matr_1, a)
+}
+
+z2010matr_1 <- do.call(cbind, z2010matr_1)
+
+#################2016
+
+#####times growth
+
+#U = Total Intermediate Output
+z_ver_matrix_16_1 <- z_ver_matrix_16*update_16$`2016:1`
+#V = Total Intermediate Input
+z_hor_matrix_16_1 <- z_hor_matrix_16*update_16$`2016:1`
+#X = Total Output
+X__2016matr_1 <- X__2016matr*update_16$`2016:1`
+
+
+x1 <- matrix(X__2016matr_1)
+u1 <- matrix(z_ver_matrix_16_1)
+v1 <- matrix(z_hor_matrix_16_1)
+A <- a2016matr
+maxiter <- 10
+for (i in 1:maxiter) {
+  tol <- 0.001
+  n <- ncol(A)
+  u <- A %*% x1
+  j <- which(u == 0)
+  u[j] <- 1
+  r <- u1/u
+  R <- matrix(r, ncol = n, nrow = n)
+  A1 <- R * A
+  v <- t(A1 * t(matrix(x1, ncol = n, nrow = n))) %*% matrix(rep(1, 
+                                                                n))
+  j <- which(v == 0)
+  v[j] <- 1
+  s <- v1/v
+  S <- matrix(s, ncol = n, nrow = n, byrow = TRUE)
+  A2016 <- A1 * S
+  rmse <- sqrt(sum((A2016 - A)^2)/(n^2))
+  if (rmse < tol) 
+    break
+}
+
+#####a matrix
+z2016matr_1 <- list()
+for (i in 1:17){
+  a <- list(matrix(unlist(ldply(A2016[,i]*z_hor_matrix_16_1[i]))))
+  z2016matr_1 <- append(z2016matr_1, a)
+}
+
+z2016matr_1 <- do.call(cbind, z2016matr_1)
+
+
+###################UPDATE Intermediate Output, Total Output, Total Input
+update_materials <- function(x, u, v, y) {
+  x_1<- list()
+  u_1<- list()
+  v_1<- list()
+  int_out <- x
+  tot_out <- u
+  tot_inp <- v
+  for (i in 1:length(y)) {
+    int_out <- int_out*y[[i]]
+    tot_out <- tot_out*y[[i]]
+    tot_inp <- tot_inp*y[[i]]
+    x_1 <- append(x_1,list(int_out))
+    u_1 <- append(u_1,list(tot_out))
+    v_1 <- append(v_1,list(tot_inp))
+  }
+  return(list(x_1, u_1, v_1))
+}
+
+z_05_1 <- update_materials(X__2005matr_1,  z_ver_matrix_05_1, z_hor_matrix_05_1, update1)
+z_05_1_x <- z_05_1[[1]]
+z_05_1_u <- z_05_1[[2]]
+z_05_1_v <- z_05_1[[3]]
+
+z_05_2 <- update_materials(X__2005matr_1,  z_ver_matrix_05_1, z_hor_matrix_05_1, update2)
+z_05_2_x <- z_05_2[[1]]
+z_05_2_u <- z_05_2[[2]]
+z_05_2_v <- z_05_2[[3]]
+
+z_10_1 <- update_materials(X__2010matr_1,  z_ver_matrix_1, z_hor_matrix_1, update3)
+z_10_1_x <- z_10_1[[1]]
+z_10_1_u <- z_10_1[[2]]
+z_10_1_v <- z_10_1[[3]]
+
+z_16_1 <- update_materials(X__2016matr_1,  z_ver_matrix_16_1, z_hor_matrix_16_1, update4)
+z_16_1_x <- z_16_1[[1]]
+z_16_1_u <- z_16_1[[2]]
+z_16_1_v <- z_16_1[[3]]
+
+z_16_2 <- update_materials(X__2016matr_1,  z_ver_matrix_16_1, z_hor_matrix_16_1, update5)
+z_16_2_x <- z_16_2[[1]]
+z_16_2_u <- z_16_2[[2]]
+z_16_2_v <- z_16_2[[3]]
+
+
+###################UPDATE RAS
+RAS_func <- function(a, x, u, v){
+  x1 <- matrix(x)
+  u1 <- matrix(u)
+  v1 <- matrix(v)
+  A <- a
+  maxiter <- 10
+  for (i in 1:maxiter) {
+    tol <- 0.001
+    n <- ncol(A)
+    u <- A %*% x1
+    j <- which(u == 0)
+    u[j] <- 1
+    r <- u1/u
+    R <- matrix(r, ncol = n, nrow = n)
+    A1 <- R * A
+    v <- t(A1 * t(matrix(x1, ncol = n, nrow = n))) %*% matrix(rep(1, 
+                                                                  n))
+    j <- which(v == 0)
+    v[j] <- 1
+    s <- v1/v
+    S <- matrix(s, ncol = n, nrow = n, byrow = TRUE)
+    A4 <- A1 * S
+    rmse <- sqrt(sum((A4 - A)^2)/(n^2))
+    if (rmse < tol) 
+      break
+  }
+  return(A4)
+}
+
+full_ras_func <- function(a, x, u, v){
+  a_fix <- list()
+  tech_matr <- a
+  for (j in 1:length(x)){
+    x1 <- matrix(x[[j]])
+    u1 <- matrix(u[[j]])
+    v1 <- matrix(v[[j]])
+    A <- a
+    tech_matr <- RAS_func(A, x1, u1, v1)
+    a_fix <- append(a_fix, list(tech_matr))
+  }
+  return(a_fix) 
+}
+
+nom_io <- function(a, x){
+  fullnom <- list()
+  for (i in 1:length(x)){
+    nom_matr <- a[[i]]%*%diag(x[[i]])
+    fullnom <- append(fullnom, list(nom_matr))
+  }
+  return(fullnom)
+}
+
+z_1 <- full_ras_func(A2005, z_05_1_x, z_05_1_u, z_05_1_v)
+z_2 <- full_ras_func(A2005, z_05_2_x, z_05_2_u, z_05_2_v)
+z_3 <- full_ras_func(A2010, z_10_1_x, z_10_1_u, z_10_1_v)
+z_4 <- full_ras_func(A2016, z_16_1_x, z_16_1_u, z_16_1_v)
+z_5 <- full_ras_func(A2016, z_16_2_x, z_16_2_u, z_16_2_v)
+
+z_1_nom <- nom_io(z_1, z_05_1_x)
+z_2_nom <- nom_io(z_2, z_05_2_x)
+z_3_nom <- nom_io(z_3, z_10_1_x)
+z_4_nom <- nom_io(z_4, z_16_1_x)
+z_5_nom <- nom_io(z_5, z_16_2_x)
+
+
+####function to aggregating X & Z
+agr_sekt <- function(x){
+  res <- list()
+  res0 <- list()
+  for (i in 1:length(x)){
+    if (ncol(x[[i]])<17){
+      sekt2 <- as.vector(ldply((rowSums(x[[i]][,2:5])), nrow = 9))
+      sekt3 <- as.vector(ldply((rowSums(x[[i]][,6:9])), nrow = 9))
+      sektfix <- lapply(list(as.matrix(cbind(x[[i]][,1],sekt2,sekt3))), as.matrix)
+      res0 <- append(res0,sektfix)
+      
+      sektor1 <- as.vector(res0[[i]][1,])
+      sektor2 <- as.vector(ldply((colSums(res0[[i]][2:5,]))))
+      sektor3 <- as.vector(ldply((colSums(res0[[i]][6:9,]))))
+      sektorfix <- lapply(list(as.matrix(rbind(sektor1,sektor2$V1,sektor3$V1))), as.matrix)
+      res <- append(res,sektorfix)
+      
+    } else {
+      sekt2 <- as.vector(ldply((rowSums(x[[i]][,2:6])), nrow = 17))
+      sekt3 <- as.vector(ldply((rowSums(x[[i]][,7:17])), nrow = 17))
+      sektfix <- lapply(list(as.matrix(cbind(x[[i]][,1],sekt2,sekt3))), as.matrix)
+      res0 <- append(res0,sektfix)
+      
+      sektor1 <- as.vector(res0[[i]][1,])
+      sektor2 <- as.vector(ldply((colSums(res0[[i]][2:6,]))))
+      sektor3 <- as.vector(ldply((colSums(res0[[i]][7:17,]))))
+      sektorfix <- lapply(list(as.matrix(rbind(sektor1,sektor2$V1,sektor3$V1))), as.matrix)
+      res <- append(res,sektorfix)
+      
+    }
+  }
+  return(res)
+}
+agr_X <- function(x){
+  res <- list()
+  for (i in 1:length(x)){
+    if (length(x[[i]])<17){
+      vektorX1 <- as.vector(sum(x[[i]][2:5]))
+      vektorX2 <- as.vector(sum(x[[i]][6:9]))
+      vektorfix <- list(as.vector(cbind(x[[i]][1],vektorX1,vektorX2)))
+      res <- append(res,vektorfix)
+    } else {
+      vektorX1 <- as.vector(sum(x[[i]][2:6]))
+      vektorX2 <- as.vector(sum(x[[i]][7:17]))
+      vektorfix <- list(as.vector(cbind(x[[i]][1],vektorX1,vektorX2)))
+      res <- append(res,vektorfix)
+    }
+  }
+  return(res)
+}
+
+
+z_1_x <- agr_X(z_05_1_x)
+z_2_x <- agr_X(z_05_2_x)
+z_3_x <- agr_X(z_10_1_x)
+z_4_x <- agr_X(z_16_1_x)
+z_5_x <- agr_X(z_16_2_x)
+
+
+z_1_3sektor <- agr_sekt(z_1_nom)
+z_2_3sektor <- agr_sekt(z_2_nom)
+z_3_3sektor <- agr_sekt(z_3_nom)
+z_4_3sektor <- agr_sekt(z_4_nom)
+z_5_3sektor <- agr_sekt(z_5_nom)
+
+
+####create aggregated a matrix ((A MATRIX HORIZONTAL (OUTPUT-BASED)))
+contr <- function(x,y, sect = c(1:3)){
+  tota <- list()
+  totb <- list()
+  totc <- list()
+  totd <- list()
+  for (i in 1:length(x)){
+    a <- rowSums(x[[i]])
+    totc <- append(totc, list(a))
+    b <- sum(y[[i]])
+    totb <- append(totb, list(b))
+    c <- totc[[i]]%*%solve(totb[[i]])
+    tota <- append(tota, list(c))
+    d <- tota[[i]][sect]
+    totd <- append(totd, d)
+  }
+  return(totd)
+}
+
+z_1_net_1 <- contr(z_1_3sektor, z_1_x, sect = 1)
+z_2_net_1 <- contr(z_2_3sektor, z_2_x, sect = 1)
+z_3_net_1 <- contr(z_3_3sektor, z_3_x, sect = 1)
+z_4_net_1 <- contr(z_4_3sektor, z_4_x, sect = 1)
+z_5_net_1 <- contr(z_5_3sektor, z_5_x, sect = 1)
+
+z1 <- list()
+z1 <- append(z1, c(z_1_net_1,z_2_net_1,z_3_net_1,z_4_net_1,z_5_net_1))
+
+z_1_net_2 <- contr(z_1_3sektor, z_1_x, sect = 2)
+z_2_net_2 <- contr(z_2_3sektor, z_2_x, sect = 2)
+z_3_net_2 <- contr(z_3_3sektor, z_3_x, sect = 2)
+z_4_net_2 <- contr(z_4_3sektor, z_4_x, sect = 2)
+z_5_net_2 <- contr(z_5_3sektor, z_5_x, sect = 2)
+
+z2 <- list()
+z2 <- append(z2, c(z_1_net_2,z_2_net_2,z_3_net_2,z_4_net_2,z_5_net_2))
+
+z_1_net_3 <- contr(z_1_3sektor, z_1_x, sect = 3)
+z_2_net_3 <- contr(z_2_3sektor, z_2_x, sect = 3)
+z_3_net_3 <- contr(z_3_3sektor, z_3_x, sect = 3)
+z_4_net_3 <- contr(z_4_3sektor, z_4_x, sect = 3)
+z_5_net_3 <- contr(z_5_3sektor, z_5_x, sect = 3)
+
+z3 <- list()
+z3 <- append(z3, c(z_1_net_3,z_2_net_3,z_3_net_3,z_4_net_3,z_5_net_3))
+
+z_nom <- list()
+z_nom <- append(z_nom, c(z_1_3sektor,z_2_3sektor,z_3_3sektor,z_4_3sektor,z_5_3sektor))
+
+
+############################################################total effect output
+#define sheet names for each data frame
+RASdat <- list('z1' = z1, 'z2' = z2, 'z3' = z3)
+
+#export each data frame to separate sheets in same Excel file
+#openxlsx::write.xlsx(RASdat, file = 'RAS Results_all effect.xlsx') 
+
+
